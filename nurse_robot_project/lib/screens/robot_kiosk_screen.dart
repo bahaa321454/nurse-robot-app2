@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import '../services/patient_service.dart';
 import '../services/arduino_service.dart';
@@ -12,8 +12,8 @@ class RobotKioskScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final patientService = Provider.watch<PatientService>(context);
-    final arduinoService = Provider.watch<ArduinoService>(context);
+    final patientService = context.watch<PatientService>();
+    final arduinoService = context.watch<ArduinoService>();
     final currentPatient = patientService.robotActivePatient;
 
     return Directionality(

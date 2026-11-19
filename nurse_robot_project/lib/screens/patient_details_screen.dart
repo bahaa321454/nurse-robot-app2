@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/patient_service.dart';
@@ -25,22 +25,23 @@ class PatientDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final patientService = Provider.watch<PatientService>(context);
-    final arduinoService = Provider.watch<ArduinoService>(context);
+    final patientService = context.watch<PatientService>();
+    final arduinoService = context.watch<ArduinoService>();
 
-    Patient? patient;
+    Patient? foundPatient;
     try {
-      patient = patientService.patients.firstWhere((p) => p.id == patientId);
+      foundPatient = patientService.patients.firstWhere((p) => p.id == patientId);
     } catch (_) {
-      patient = null;
+      foundPatient = null;
     }
 
-    if (patient == null) {
+    if (foundPatient == null) {
       return const Scaffold(
         body: Center(child: Text('المريض غير موجود')),
       );
     }
 
+    final patient = foundPatient;
     final dischargeStr = DateFormat('yyyy/MM/dd - hh:mm a').format(patient.dischargeDate);
 
     return Directionality(
@@ -56,7 +57,7 @@ class PatientDetailsScreen extends StatelessWidget {
               icon: const Icon(Icons.cast_connected),
               tooltip: 'تحديد هذا المريض لشاشة الروبوت',
               onPressed: () {
-                patientService.selectPatientForRobot(patient!.id);
+                patientService.selectPatientForRobot(patient.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('تم تعيين ${patient.name} على شاشة الروبوت')),
                 );
@@ -110,7 +111,7 @@ class PatientDetailsScreen extends StatelessWidget {
                         icon: const Icon(Icons.directions_run, size: 18),
                         label: const Text('إرسال الروبوت', style: TextStyle(fontSize: 11)),
                         onPressed: () {
-                          arduinoService.sendTargetRoom(patient!.roomNumber);
+                          arduinoService.sendTargetRoom(patient.roomNumber);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('تم إرسال أمر التوجه إلى ${patient.roomNumber} للأردوينو')),
                           );
@@ -161,7 +162,7 @@ class PatientDetailsScreen extends StatelessWidget {
                   TextButton.icon(
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('إضافة دواء'),
-                    onPressed: () => _showAddMedicationDialog(context, patient!),
+                    onPressed: () => _showAddMedicationDialog(context, patient),
                   ),
                 ],
               ),
@@ -273,7 +274,7 @@ class PatientDetailsScreen extends StatelessWidget {
                                       ),
                                       onPressed: () {
                                         patientService.toggleMedicationStatus(
-                                          patientId: patient!.id,
+                                          patientId: patient.id,
                                           medicationId: med.id,
                                         );
                                       },
