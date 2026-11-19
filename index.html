@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>روبوت التمريض الذكي | Smart Nurse Robot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="top-nav">
+    <div class="brand">
+      <span class="icon">🏥</span>
+      <div>
+        <h1>روبوت التمريض الذكي</h1>
+        <p class="subtitle">Smart Nurse Healthcare System</p>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button id="toggleModeBtn" class="btn btn-warning">
+        🤖 التبديل إلى: <span id="currentModeLabel">شاشة تابلت الروبوت</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hardware Status Bar -->
+  <div class="hardware-bar">
+    <div class="hw-item">
+      <span class="status-dot connected"></span>
+      <span>حالة الربط بالأردوينو: <strong>متصل عبر البلوتوث (HC-05)</strong></span>
+    </div>
+    <div class="hw-controls">
+      <button class="btn-sm btn-danger" onclick="triggerBuzzer()">🔊 تجربة جرس الإنذار (Buzzer)</button>
+      <button class="btn-sm btn-success" onclick="toggleServo()">🚪 فتح / إغلاق درج الدواء (Servo)</button>
+      <span id="servoState" class="badge">الدرج: مغلق (0°)</span>
+    </div>
+  </div>
+
+  <main class="container">
+    <!-- VIEW 1: NURSE MOBILE DASHBOARD -->
+    <section id="nurseView" class="view-section active">
+      <div class="section-header">
+        <h2>قائمة المرضى المقيمين</h2>
+        <button class="btn btn-primary" onclick="openModal('addPatientModal')">➕ تسجيل مريض جديد</button>
+      </div>
+
+      <div id="patientList" class="patient-grid">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: ROBOT TABLET KIOSK DISPLAY -->
+    <section id="robotView" class="view-section">
+      <div class="kiosk-header">
+        <div>
+          <h2>واجهة تابلت الروبوت (Robot Kiosk Mode)</h2>
+          <p>شاشة العرض المخصصة للمريض المثبتة على صدر الروبوت</p>
+        </div>
+        <div class="select-patient-wrapper">
+          <label>المريض الحالي:</label>
+          <select id="kioskPatientSelect" onchange="changeKioskPatient(this.value)">
+            <!-- Options via JS -->
+          </select>
+        </div>
+      </div>
+
+      <div class="kiosk-container">
+        <!-- Left: Patient Card -->
+        <div class="kiosk-patient-card">
+          <div class="avatar-large">👤</div>
+          <h2 id="kioskPatientName">أحمد محمود إبراهيم</h2>
+          <div id="kioskRoom" class="room-pill">غرفة 104 - سرير أ</div>
+          <hr>
+          <div class="kiosk-info-row">
+            <span class="icon">📅</span>
+            <div>
+              <div class="label">تاريخ الخروج المتوقع من المستشفى:</div>
+              <strong id="kioskDischargeDate">2026/11/22 - 12:00 م</strong>
+            </div>
+          </div>
+          <div class="kiosk-info-row">
+            <span class="icon">📋</span>
+            <div>
+              <div class="label">التشخيص الطبي:</div>
+              <span id="kioskDiagnosis">متابعة ما بعد جراحة المرارة</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Current Medicine Focus -->
+        <div class="kiosk-med-card">
+          <div class="med-header">
+            <span class="alarm-tag">⏰ ميعاد الجرعة: <strong id="kioskMedTime">02:00 PM</strong></span>
+            <span class="type-pill" id="kioskMedType">أقراص</span>
+          </div>
+
+          <div class="med-body">
+            <div class="med-image-container">
+              <img id="kioskMedImg" src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400" alt="صورة الدواء">
+              <p class="img-hint">شكل وحجم قرص الدواء</p>
+            </div>
+            <div class="med-details">
+              <h1 id="kioskMedName">Augmentin 1g</h1>
+              <div class="dosage-box">
+                <strong>الجرعة المطلوبة:</strong>
+                <p id="kioskMedDosage">قرص واحد بعد الغداء مع كوب ماء كامل</p>
+              </div>
+              <div class="instructions-box">
+                <strong>تعليمات هامة:</strong>
+                <p id="kioskMedNotes">يجب تناوله بعد وجبة الطعام مباشرة لتجنب اضطراب المعدة.</p>
+              </div>
+            </div>
+          </div>
+
+          <button id="takeMedBtn" class="btn btn-confirm-large" onclick="confirmMedTaken()">
+            ✅ أخذت الدواء الآن (تأكيد تناول الجرعة)
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: ADD PATIENT -->
+  <div id="addPatientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>تسجيل مريض جديد</h3>
+        <span class="close" onclick="closeModal('addPatientModal')">&times;</span>
+      </div>
+      <form id="addPatientForm" onsubmit="savePatient(event)">
+        <div class="form-group">
+          <label>اسم المريض بالكامل *</label>
+          <input type="text" id="pName" required placeholder="مثلاً: محمد علي حسن">
+        </div>
+        <div class="form-group">
+          <label>رقم الغرفة والسرير *</label>
+          <input type="text" id="pRoom" required placeholder="مثلاً: غرفة 205 - سرير ب">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>تاريخ الخروج المتوقع *</label>
+            <input type="date" id="pDischargeDate" required>
+          </div>
+          <div class="form-group">
+            <label>وقت الخروج *</label>
+            <input type="time" id="pDischargeTime" value="12:00" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>التشخيص الطبي / ملاحظات</label>
+          <textarea id="pDiagnosis" rows="2" placeholder="حالة المريض وأي تنبيهات خاصة"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">حفظ المريض والبدء بجدول العلاج</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD MEDICATION -->
+  <div id="addMedModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>إضافة دواء للمريض</h3>
+        <span class="close" onclick="closeModal('addMedModal')">&times;</span>
+      </div>
+      <form id="addMedForm" onsubmit="saveMedication(event)">
+        <input type="hidden" id="targetPatientId">
+        <div class="form-group">
+          <label>اسم الدواء *</label>
+          <input type="text" id="mName" required placeholder="مثلاً: Panadol Extra">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>نوع الدواء</label>
+            <select id="mType">
+              <option value="أقراص">أقراص</option>
+              <option value="كبسولات">كبسولات</option>
+              <option value="شراب">شراب</option>
+              <option value="حقن">حقن</option>
+              <option value="قطرة">قطرة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ميعاد الجرعة *</label>
+            <input type="time" id="mTime" required value="08:00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>الجرعة *</label>
+          <input type="text" id="mDosage" required placeholder="مثلاً: قرص واحد بعد الأكل">
+        </div>
+        <div class="form-group">
+          <label>تعليمات إضافية للمريض</label>
+          <input type="text" id="mNotes" placeholder="مثلاً: مع كوب ماء دافئ">
+        </div>
+        <div class="form-group">
+          <label>صورة شكل الدواء (رابط صورة أو اختار من جهازك)</label>
+          <input type="file" id="mImageFile" accept="image/*" onchange="handleMedImage(event)">
+          <input type="text" id="mImageUrl" placeholder="أو ضع رابط صورة الدواء هنا">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">حفظ الدواء في جدول المريض</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
